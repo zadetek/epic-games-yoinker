@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mail;
@@ -221,18 +221,28 @@ namespace epic_claimer
                 return;
             }
 
-            // Click the get button.
-            GetElement("//button[@data-testid=\"purchase-cta-button\"]").Click();
-            Thread.Sleep(15000);
-            // Click place order button
-            GetElement("//button[@class=\"btn btn-primary\"]").Click();
-            Thread.Sleep(15000);
-            // click the agree button
-            GetElements("//button[@class=\"btn btn-primary\"]")[1].Click();
+            try
+            {
+                // Click the get button.
+                GetElement("//button[@data-testid=\"purchase-cta-button\"]").Click();
+                Thread.Sleep(15000);
+                // Click place order button
+                GetElement("//button[@class=\"btn btn-primary\"]").Click();
+                Thread.Sleep(15000);
+                // click the agree button
+                GetElements("//button[@class=\"btn btn-primary\"]")[1].Click();
 
-            Thread.Sleep(5000);
-
-            Console.WriteLine("Claimed");
+                Thread.Sleep(5000);
+                Console.WriteLine("Claimed");
+            }
+            catch(System.NullReferenceException)
+            {
+                Console.WriteLine("One of the buttons was not clicked, purchase may not be complete. ");
+            }
+            catch (System.Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
         }
 
         private static List<IWebElement> GetElements(string xPath)
