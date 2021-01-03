@@ -194,15 +194,9 @@ namespace epic_claimer
             _wait.Until(x => x.FindElement(By.XPath("//div[@data-component=\"CardGridDesktopBase\"]")).Displayed);
 
             Thread.Sleep(10000);
-
-            var freeGameSection =
-                new Regex("<h1 class=\"css-.+?\">Free Games<\\/h1>(.+?)Sales and Specials").Match(_driver.PageSource);
-
-            var freeGameUrls =
-                new Regex("href=\"(/store/en-US/product.+?)\">").Matches(freeGameSection.Groups[0].ToString());
-
-            var urls = freeGameUrls.ToList().Select(url => $"https://www.epicgames.com{url.Groups[1]}");
-
+            
+            var urls = GetElements("//a[descendant::span[text()='Free Now']]").Select(element => element.GetAttribute("href")).ToList();
+            
             return urls;
         }
 
@@ -225,23 +219,19 @@ namespace epic_claimer
             {
                 // Click the get button.
                 GetElement("//button[@data-testid=\"purchase-cta-button\"]").Click();
-                Thread.Sleep(15000);
+                Thread.Sleep(5000);
                 // Click place order button
                 GetElement("//button[@class=\"btn btn-primary\"]").Click();
-                Thread.Sleep(15000);
+                Thread.Sleep(5000);
                 // click the agree button
                 GetElements("//button[@class=\"btn btn-primary\"]")[1].Click();
-
                 Thread.Sleep(5000);
                 Console.WriteLine("Claimed");
             }
-            catch(System.NullReferenceException)
+            catch (Exception e)
             {
-                Console.WriteLine("One of the buttons was not clicked, purchase may not be complete. ");
-            }
-            catch (System.Exception ex)
-            {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine("failed");
+                throw;
             }
         }
 
