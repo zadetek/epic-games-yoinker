@@ -73,7 +73,26 @@ namespace epic_claimer
             // Retrieve the game urls.
             foreach (var url in GetFreeGamesUrls())
             {
-                ClaimGame(url);
+                var status = Status.Failed;
+                
+                for (var i = 0; i < 5; i++)
+                {
+                    status = ClaimGame(url);
+                    
+                    if (status == Status.Success)
+                    {
+                        SendTelegram(url, status);
+                        break;
+                    }
+                    if (status == Status.Owned)
+                    {
+                        break;
+                    }
+                }
+                if (status == Status.Failed)
+                {
+                    SendTelegram(url,status);
+                }
             }
 
             Console.WriteLine("process finished");
@@ -186,10 +205,25 @@ namespace epic_claimer
 
                 Thread.Sleep(1000);
 
-                GetElement("//span[text()=\"Log in now\"]").Click();
+ 
+                if (_driver.Url != loginUrl)
+                {
+                    Console.WriteLine("success");
 
-                Thread.Sleep(10000);
+                    return true;
+                }
 
+                try
+                {
+                    GetElement("//span[text()=\"Log in now\"]").Click();
+                    
+                    Thread.Sleep(20000);
+                }
+                catch
+                {
+                    // ignored
+                }
+                
                 if (_driver.Url != loginUrl)
                 {
                     Console.WriteLine("success");
@@ -217,7 +251,7 @@ namespace epic_claimer
             return urls;
         }
 
-        private static void ClaimGame(string url)
+        private static Status ClaimGame(string url)
         {
             Console.Write($"claiming {url} : ");
 
@@ -228,28 +262,40 @@ namespace epic_claimer
             if (_driver.PageSource.Contains("Owned</span>"))
             {
                 Console.WriteLine("already owned");
-                return;
+                
+                return Status.Owned;
             }
 
             try
             {
                 // Click the get button.
                 GetElement("//button[@data-testid=\"purchase-cta-button\"]").Click();
-                Thread.Sleep(10000);
+                Thread.Sleep(20000);
+                if (_driver.PageSource.ToLower().Contains("please read this agreement carefully"))
+                {
+                    GetElement("//input[@id=\"agree\"]").Click();
+                    Thread.Sleep(1000);
+                    GetElement("//button[descendant::span[text()='Accept']]").Click();
+                    Thread.Sleep(1000);
+                    GetElement("//button[@data-testid=\"purchase-cta-button\"]").Click();
+                    Thread.Sleep(20000);
+                }
+                
                 // Click place order button
                 GetElement("//button[@class=\"btn btn-primary\"]").Click();
-                Thread.Sleep(10000);
+                Thread.Sleep(20000);
                 // click the agree button
                 GetElements("//button[@class=\"btn btn-primary\"]")[1].Click();
-                Thread.Sleep(10000);
+                Thread.Sleep(5000);
+                
                 Console.WriteLine("Claimed");
-                SendTelegram(url, Status.Success);
+                return Status.Success;
             }
             catch
             {
-                SendTelegram(url, Status.Failed);
-                Console.WriteLine("failed");
-                throw;
+                Console.WriteLine("Failed");
+                
+                return Status.Failed;
             }
         }
 
@@ -274,6 +320,8 @@ namespace epic_claimer
             try
             {
                 _wait.Until(x => x.FindElement(By.XPath(xPath)));
+                
+                
 
                 return _driver.FindElement(By.XPath(xPath));
             }
@@ -314,7 +362,9 @@ namespace epic_claimer
 
     public enum Status
     {
+        // only status 0 and 1 can be passed to the telegram api.
         Success = 0,
-        Failed  = 1
+        Failed  = 1,
+        Owned = 2,
     }
 }
